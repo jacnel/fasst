@@ -25,7 +25,23 @@ Result LTable<StaticConfig>::del(uint64_t key_hash, const char* key,
     return Result::kNotFound;
   }
 
+  if (std::is_base_of<::mica::pool::CircularLogTag,
+                      typename Pool::Tag>::value) {
+  } else  // if (std::is_base_of<::mica::pool::SegregatedFitTag,
+          // Pool::Tag>::value)
+  {
+    pool_->lock();
+  }
+
   pool_->release(get_item_offset(located_bucket->item_vec[item_index]));
+
+  if (std::is_base_of<::mica::pool::CircularLogTag,
+                      typename Pool::Tag>::value) {
+  } else  // if (std::is_base_of<::mica::pool::SegregatedFitTag,
+          // Pool::Tag>::value)
+  {
+    pool_->unlock();
+  }
 
   located_bucket->item_vec[item_index] = 0;
   stat_dec(&Stats::count);

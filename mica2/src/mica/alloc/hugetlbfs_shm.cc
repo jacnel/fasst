@@ -66,9 +66,9 @@ void HugeTLBFS_SHM::clean_other_files() {
   }
 }
 
-void HugeTLBFS_SHM::make_path(size_t page_id, char* out_path) {
+void HugeTLBFS_SHM::make_path(size_t file_id, char* out_path) {
   snprintf(out_path, PATH_MAX, "%s/%s%zu", hugetlbfs_path_.c_str(),
-           filename_prefix_.c_str(), page_id);
+           filename_prefix_.c_str(), file_id);
 }
 
 void HugeTLBFS_SHM::lock() {
@@ -101,11 +101,6 @@ void HugeTLBFS_SHM::dump_page_info() {
 
 HugeTLBFS_SHM::HugeTLBFS_SHM(const ::mica::util::Config& config)
     : config_(config) {
-
-  // Don't use HugeTLBFS_SHM in HoTS
-  printf("Error: HugeTLBFS_SHM not supported in HoTS.\n");
-  exit(-1);
-
   // Parse the configuration.
   hugetlbfs_path_ = config.get("hugetlbfs_path").get_str("/mnt/huge");
   filename_prefix_ = config.get("filename_prefix").get_str("mica_shm_");
@@ -180,14 +175,79 @@ void HugeTLBFS_SHM::initialize() {
 
   // initialize pages
   if (verbose_) printf("initializing pages\n");
-  size_t num_allocated_pages;
-  for (page_id = 0; page_id < num_pages_to_init_; page_id++) {
+  size_t num_allocated_pages = 0;
+
+  // reuse all of existing files
+  DIR* d = opendir(hugetlbfs_path_.c_str());
+
+  long name_max = pathconf(hugetlbfs_path_.c_str(), _PC_NAME_MAX);
+  if (name_max == -1) name_max = 255;
+  dirent* de = reinterpret_cast<dirent*>(malloc(
+      offsetof(dirent, d_name) + static_cast<long unsigned int>(name_max) + 1));
+
+  size_t next_file_id = 0;
+  page_id = 0;
+  while (true) {
+    dirent* rde;
+    if (readdir_r(d, de, &rde) != 0) break;
+    if (rde == nullptr) break;
+
+    if (strcmp(rde->d_name, ".") == 0 || strcmp(rde->d_name, "..") == 0)
+      continue;
+    if (strncmp(rde->d_name, filename_prefix_.c_str(),
+                std::min(strlen(rde->d_name), filename_prefix_.size())) != 0)
+      continue;
+
+    size_t file_id =
+        static_cast<size_t>(atoi(rde->d_name + filename_prefix_.size()));
+    char path[PATH_MAX];
+    make_path(file_id, path);
+
+    int fd = open(path, O_RDWR, 0755);
+    if (fd == -1) {
+      perror("");
+      fprintf(stderr, "error: could not open %s\n", path);
+      assert(false);
+      return;
+    }
+
+    void* p =
+        mmap(nullptr, kPageSize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+
+    close(fd);
+
+    if (p == MAP_FAILED) {
+      unlink(path);
+      continue;  // continue examining existing files
+    }
+
+    // printf("got page %zu (address %p)\n", page_id, p);
+
+    // this is required to cause a page fault and invoke actual memory
+    // allocation
+    *(size_t*)p = 0;
+
+    assert(pages_.size() == page_id);
+    pages_.push_back(Page{0, nullptr, nullptr, 0, false});
+    pages_[page_id].file_id = file_id;
+    pages_[page_id].addr = p;
+    // printf("initial allocation of %zu on %p\n", kPageSize, p);
+
+    page_id++;
+    if (next_file_id <= file_id) next_file_id = file_id + 1;
+  }
+  closedir(d);
+
+  free(de);
+
+  // create additional files
+  for (; page_id < num_pages_to_init_; page_id++) {
     if (verbose_ && (page_id % 128 == 0)) {
       printf("\r%zu / %zu", page_id + 1, num_pages_to_init_);
       fflush(stdout);
     }
 
-    size_t file_id = page_id;
+    size_t file_id = next_file_id++;
     char path[PATH_MAX];
     make_path(file_id, path);
 
@@ -850,6 +910,8 @@ void* HugeTLBFS_SHM::malloc_contiguous_any(size_t size) {
 void HugeTLBFS_SHM::free_contiguous(void* ptr) { unmap(ptr); }
 
 void* HugeTLBFS_SHM::malloc_striped(size_t size) {
+  if (::mica::util::lcore.numa_count() == 1) return malloc_contiguous(size, 0);
+
   // size_t numa_node = ::mica::util::lcore.numa_id();
   // if (numa_node == ::mica::util::lcore.kUnknown) {
   //   fprintf(stderr, "error: unable to detect current lcore\n");
@@ -918,6 +980,11 @@ void* HugeTLBFS_SHM::malloc_striped(size_t size) {
 }
 
 void HugeTLBFS_SHM::free_striped(void* ptr) {
+  if (::mica::util::lcore.numa_count() == 1) {
+    free_contiguous(ptr);
+    return;
+  }
+
   void* base = (void*)((size_t)ptr - 2 * kPageSize);
   uint64_t size = *(uint64_t*)base;
 

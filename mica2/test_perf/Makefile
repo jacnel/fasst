@@ -1,10 +1,10 @@
 MICA_SRC := ../src
-CXX := g++-5
+CXX := g++
 INC	:= -I ${MICA_SRC}
 #DEBUG := -DNDEBUG
 LTO := -flto
 CPPFLAGS := ${LTO} -O3 -std=c++11 ${DEBUG} ${INC} -Wall -Werror \
-	-Wno-unused-result -Wno-unused-value -Wno-unused-function
+	-Wno-unused-result -Wno-unused-value -Wno-unused-function -faligned-new
 
 LD := ${CXX} ${LTO}
 LDFLAGS := ${LDFLAGS} -lnuma -lpapi -lpthread

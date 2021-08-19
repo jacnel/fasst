@@ -93,6 +93,46 @@ class Queue {
 
   std::array<T, Capacity> items_ __attribute__((aligned(128)));
 } __attribute__((aligned(128)));
+
+template <typename T, size_t Capacity>
+class SingleThreadedQueue {
+ public:
+  SingleThreadedQueue() : head_(0), tail_(0) {}
+
+  bool empty() const { return head_ == tail_; }
+
+  bool full() const {
+    size_t tail_next = tail_ + 1;
+    if (tail_next == Capacity) tail_next = 0;
+    return tail_next == head_;
+  }
+
+  size_t size() const {
+    size_t size = tail_ - head_;
+    if (size > Capacity) size += Capacity;
+    return size;
+  }
+
+  const T& head() const { return items_[head_]; }
+
+  // The user must check empty() and read or copy head() before calling
+  // pop_head().
+  void pop_head() {
+    if (++head_ == Capacity) head_ = 0;
+  }
+
+  T& tail() { return items_[tail_]; }
+
+  // The user must check full() and write to tail() before calling push_tail().
+  void push_tail() {
+    if (++tail_ == Capacity) tail_ = 0;
+  }
+
+ private:
+  size_t head_;
+  size_t tail_;
+  std::array<T, Capacity> items_;
+};
 }
 }
 

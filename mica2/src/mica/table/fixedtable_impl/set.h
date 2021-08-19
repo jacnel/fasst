@@ -12,7 +12,7 @@ Result FixedTable<StaticConfig>::set(uint32_t caller_id, uint64_t key_hash,
   Bucket* bucket = get_bucket(bucket_index);
 
   // We must be holding the lock on this bucket at primaries.
-  if(is_primary) {
+  if (is_primary) {
     assert(is_locked(bucket->timestamp));
     assert(bucket->locker_id == caller_id);
   }
@@ -26,7 +26,7 @@ Result FixedTable<StaticConfig>::set(uint32_t caller_id, uint64_t key_hash,
     if (item_index == StaticConfig::kBucketCap) {
       // No more space. This should be fatal.
       unlock_bucket_ptr(caller_id, bucket);
-      return Result::kInsufficientSpaceIndex;	// This should be fatal
+      return Result::kInsufficientSpace;  // This should be fatal
     }
 
     stat_inc(&Stats::set_new);
@@ -37,7 +37,7 @@ Result FixedTable<StaticConfig>::set(uint32_t caller_id, uint64_t key_hash,
   set_item(located_bucket, item_index, key, value);
 
   // Coordinators acquire bucket locks at primary. No need to unlock at backups.
-  if(is_primary) {
+  if (is_primary) {
     // unlock_bucket_ptr() will only release the lock that was previously
     // acquired at the primary for this set(). Other locks acquired by
     // @caller_id on this bucket are still held.
@@ -46,7 +46,7 @@ Result FixedTable<StaticConfig>::set(uint32_t caller_id, uint64_t key_hash,
 
   return Result::kSuccess;
 }
-}
-}
+}  // namespace table
+}  // namespace mica
 
 #endif

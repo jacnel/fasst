@@ -1,5 +1,5 @@
 MICA_SRC := ../src
-CXX := g++-5
+CXX := g++
 INC	:= -I ${MICA_SRC}
 #DEBUG := -DNDEBUG
 LTO := -flto

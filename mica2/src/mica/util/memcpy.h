@@ -2,6 +2,7 @@
 #ifndef MICA_UTIL_MEMCPY_H_
 #define MICA_UTIL_MEMCPY_H_
 
+#include <cassert>
 #include <cstring>
 #include "mica/common.h"
 #include "mica/util/rte_memcpy/rte_memcpy_mod.h"
@@ -15,13 +16,9 @@ static void memcpy(void* dest, const void* src, size_t n) {
   ::mica::util::rte_memcpy_func(dest, src, n);
 }
 
-static void memmove(void* dest, const void* src, size_t n) {
-  ::memmove(dest, src, n);
-}
+static void memmove(void* dest, const void* src, size_t n) { ::memmove(dest, src, n); }
 
-static int memcmp(const void* a, const void* b, size_t n) {
-  return ::memcmp(a, b, n);
-}
+static int memcmp(const void* a, const void* b, size_t n) { return ::memcmp(a, b, n); }
 
 static bool memcmp_equal(const void* a, const void* b, size_t n) {
   return ::memcmp(a, b, n) == 0;
@@ -29,43 +26,43 @@ static bool memcmp_equal(const void* a, const void* b, size_t n) {
 
 // Wrappers for any pointer.
 template <typename T>
-static void memset(T* dest, int c, size_t n) {
+void memset(T* dest, int c, size_t n) {
   ::mica::util::memset(reinterpret_cast<void*>(dest), c, n);
 }
 
 template <typename T1, typename T2>
-static void memcpy(T1* dest, const T2* src, size_t n) {
+void memcpy(T1* dest, const T2* src, size_t n) {
   ::mica::util::memcpy(reinterpret_cast<void*>(dest),
                        reinterpret_cast<const void*>(src), n);
 }
 
 template <typename T1, typename T2>
-static void memmove(T1* dest, const T2* src, size_t n) {
+void memmove(T1* dest, const T2* src, size_t n) {
   ::mica::util::memmove(reinterpret_cast<void*>(dest),
                         reinterpret_cast<const void*>(src), n);
 }
 
 template <typename T1, typename T2>
-static int memcmp(const T1* a, const T2* b, size_t n) {
+int memcmp(const T1* a, const T2* b, size_t n) {
   return ::mica::util::memcmp(reinterpret_cast<const void*>(a),
                               reinterpret_cast<const void*>(b), n);
 }
 
 template <typename T1, typename T2>
-static bool memcmp_equal(const T1* a, const T2* b, size_t n) {
+bool memcmp_equal(const T1* a, const T2* b, size_t n) {
   return ::mica::util::memcmp_equal(reinterpret_cast<const void*>(a),
                                     reinterpret_cast<const void*>(b), n);
 }
 
 template <int Alignment, typename T>
-static void memset(T* dest, int c, size_t n) {
+void memset(T* dest, int c, size_t n) {
   assert(n == ::mica::util::roundup<Alignment>(n));
   assert(reinterpret_cast<size_t>(dest) % Alignment == 0);
   ::mica::util::memset(dest, c, n);
 }
 
 template <int Alignment, typename T1, typename T2>
-static void memcpy(T1* dest, const T2* src, size_t n) {
+void memcpy(T1* dest, const T2* src, size_t n) {
   assert(n == ::mica::util::roundup<Alignment>(n));
   assert(reinterpret_cast<size_t>(dest) % Alignment == 0);
   assert(reinterpret_cast<size_t>(src) % Alignment == 0);
@@ -98,7 +95,7 @@ static void memcpy(T1* dest, const T2* src, size_t n) {
 }
 
 template <int Alignment, typename T1, typename T2>
-static void memmove(T1* dest, const T2* src, size_t n) {
+void memmove(T1* dest, const T2* src, size_t n) {
   assert(n == ::mica::util::roundup<Alignment>(n));
   assert(reinterpret_cast<size_t>(dest) % Alignment == 0);
   assert(reinterpret_cast<size_t>(src) % Alignment == 0);
@@ -106,7 +103,7 @@ static void memmove(T1* dest, const T2* src, size_t n) {
 }
 
 template <int Alignment, typename T1, typename T2>
-static int memcmp(const T1* a, const T2* b, size_t n) {
+int memcmp(const T1* a, const T2* b, size_t n) {
   assert(n == ::mica::util::roundup<Alignment>(n));
   assert(reinterpret_cast<size_t>(a) % Alignment == 0);
   assert(reinterpret_cast<size_t>(b) % Alignment == 0);
@@ -114,7 +111,7 @@ static int memcmp(const T1* a, const T2* b, size_t n) {
 }
 
 template <int Alignment, typename T1, typename T2>
-static bool memcmp_equal(const T1* a, const T2* b, size_t n) {
+bool memcmp_equal(const T1* a, const T2* b, size_t n) {
   assert(n == ::mica::util::roundup<Alignment>(n));
   assert(reinterpret_cast<size_t>(a) % Alignment == 0);
   assert(reinterpret_cast<size_t>(b) % Alignment == 0);

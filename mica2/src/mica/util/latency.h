@@ -67,6 +67,11 @@ class Latency {
 
   uint64_t avg() const { return sum() / std::max(uint64_t(1), count()); }
 
+  double avg_f() const {
+    return static_cast<double>(sum()) /
+           static_cast<double>(std::max(uint64_t(1), count()));
+  }
+
   uint64_t min() const {
     uint64_t i;
     for (i = 0; i < 128; i++)
@@ -99,10 +104,7 @@ class Latency {
     return 0;
   }
 
-  // Return the (p * 100) percentile latency
   uint64_t perc(double p) const {
-    assert(p >= 0.0 && p <= 1.00);
-
     uint64_t i;
     int64_t thres = static_cast<int64_t>(p * static_cast<double>(count()));
     for (i = 0; i < 128; i++)

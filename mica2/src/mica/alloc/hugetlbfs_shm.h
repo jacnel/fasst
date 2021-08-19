@@ -10,7 +10,8 @@
 
 // Configuration file entries for HugeTLBFS_SHM:
 //
-//  * hugetlbfs_path (string): The HugeTLBFS directory. Default = "/mnt/huge"
+//  * hugetlbfs_path (string): The HugeTLBFS directory.
+//    Default = "/mnt/huge"
 //  * filename_prefix (string): The prefix of the filenames on HugeTLBFS.
 //    Default = "mica_shm_"
 //  * num_pages_to_init (integer): The maximum number of pages to initialize

@@ -6,12 +6,13 @@ namespace mica {
 namespace table {
 template <class StaticConfig>
 Result FixedTable<StaticConfig>::set_spinlock(uint32_t caller_id,
-    uint64_t key_hash, ft_key_t key, const char* value) {
+                                              uint64_t key_hash, ft_key_t key,
+                                              const char* value) {
   // Can be called *locally* at both primary and backup datastores
   uint32_t bucket_index = calc_bucket_index(key_hash);
   Bucket* bucket = get_bucket(bucket_index);
 
-  while(!lock_bucket_ptr(caller_id, bucket)) {
+  while (!lock_bucket_ptr(caller_id, bucket)) {
     // Spin on the bucket lock
   }
 
@@ -24,7 +25,7 @@ Result FixedTable<StaticConfig>::set_spinlock(uint32_t caller_id,
     if (item_index == StaticConfig::kBucketCap) {
       // no more space
       unlock_bucket_ptr(caller_id, bucket);
-      return Result::kInsufficientSpaceIndex;	// This should be fatal
+      return Result::kInsufficientSpace;  // This should be fatal
     }
 
     stat_inc(&Stats::set_new);
@@ -36,7 +37,7 @@ Result FixedTable<StaticConfig>::set_spinlock(uint32_t caller_id,
   unlock_bucket_ptr(caller_id, bucket);
   return Result::kSuccess;
 }
-}
-}
+}  // namespace table
+}  // namespace mica
 
 #endif
