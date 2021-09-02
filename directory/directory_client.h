@@ -37,7 +37,7 @@ class DirectoryClient {
                            info.num_clients, 0, /* conn qps, UC */
                            NULL,                /* conn prealloc buf */
                            sizeof(directory_entry_t), /* buf size */
-                           DIRECTORY_SHM_KEY,         /* conn buf shm key */
+                           DIR_CLIENT_SHM_KEY,         /* conn buf shm key */
                            NULL, 0, /* dgram prealloc buf, dgram qps */
                            0,       /* buf size */
                            -1);     /* dgram buf shm key */

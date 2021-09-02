@@ -65,6 +65,7 @@ static_assert(bit_capacity(HOTS_WRKR_GID_BITS) >= HOTS_MAX_WORKERS, "");
 #define LOCKSERVER_SHM_KEY 201
 
 #define DIRECTORY_SHM_KEY 50 
+#define DIR_CLIENT_SHM_KEY 51
 
 // Datastores
 #define HOTS_MAX_VALUE 40 /* Max obj val_size. Doesn't affect performance. */
