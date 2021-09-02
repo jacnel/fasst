@@ -81,11 +81,14 @@ class Tx {
  public:
   /* Constructor */
   Tx(coro_id_t coro_id, Rpc *rpc, Mappings *mappings, Logger *logger,
+     CacheManager *cache_mgr, DirectoryClient *dir_client,
      coro_call_t *coro_arr)
       : coro_id(coro_id),
         rpc(rpc),
         mappings(mappings),
         logger(logger),
+        cache_mgr(cache_mgr),
+        dir_client(dir_client),
         coro_arr(coro_arr) {
     assert(coro_id >= 1 && coro_id < RPC_MAX_CORO); /* No Tx for master */
     assert(rpc != NULL && mappings != NULL && logger != NULL &&

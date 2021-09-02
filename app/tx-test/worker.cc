@@ -41,6 +41,8 @@ __thread Rpc *rpc;
 __thread Logger *logger;
 __thread Mappings *mappings;
 __thread Lockserver *lockserver;
+__thread CacheManager *cache_mgr;
+__thread DirectoryClient *dir_client;
 
 /* Stats */
 __thread size_t stat_tx_tot = 0;
@@ -110,7 +112,8 @@ void slave_func_single_read(coro_yield_t &yield, int coro_id) {
   _unused(tx_end_time); /* If MEASURE_LATENCY = 0 */
 
   /* DO NOT use rpc after this point. It belongs to tx/ now */
-  Tx *tx = new Tx(coro_id, rpc, mappings, logger, coro_arr);
+  Tx *tx =
+      new Tx(coro_id, rpc, mappings, logger, cache_mgr, dir_client, coro_arr);
 
   hots_key_t key; /* The single key */
   hots_obj_t obj; /* The single object */
@@ -492,6 +495,16 @@ void run_thread(struct thread_params *params) {
                           num_backups, use_lock_server);
   logger = new Logger(wrkr_gid, wrkr_lid, num_machines, num_coro);
 
+  cache_mgr = new CacheManager();
+
+  dir_args_t dir_args;
+  dir_args.machine_id = mappings->machine_id;
+  dir_args.num_clients = mappings->num_machines;
+  dir_args.num_dirs = mappings->num_machines;
+  dir_args.num_entries = 30000;
+  dir_args.port_index = 0;
+  dir_client = new DirectoryClient(dir_args, mappings);
+
   printf("Worker %d: starting. Am I lock server = %d\n", wrkr_gid,
          mappings->am_i_lock_server);
 
@@ -540,7 +553,7 @@ void run_thread(struct thread_params *params) {
     rpc->register_rpc_handler(RPC_LOGGER_REQ, logger_rpc_handler,
                               (void *)logger);
 
-    // Register cache 
+    // Register cache
     rpc->register_rpc_handler(RPC_CACHE_REQ, cache_rpc_handler,
                               (void *)params->cache);
 
