@@ -162,7 +162,7 @@ class CTable : public TableInterface {
 
   struct Bucket {
     uint32_t next_extra_bucket_index;  // 1-base; 0 = no extra bucket
-    uint32_t locker_id;
+    uint32_t locker_id = kInvalidLockerID;
     uint64_t version;
     uint64_t item_vec[StaticConfig::kBucketSize];
 
