@@ -24,8 +24,6 @@ Result CTable<StaticConfig>::commit_update(uint32_t caller_id,
     return Result::kError;
   }
 
-  bool overwriting;
-
   lock_bucket(bucket, caller_id);
 
   Bucket* located_bucket;
@@ -102,7 +100,7 @@ Result CTable<StaticConfig>::commit_update(uint32_t caller_id,
   cleanup_bucket(caller_id, new_item_offset, new_tail);
 
   // this is done after bucket is updated and unlocked
-  if (overwriting) pool_->release(item_offset);
+  pool_->release(item_offset);
 
   stat_inc(&Stats::count);
 
