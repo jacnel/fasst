@@ -295,7 +295,7 @@ void slave_func(coro_yield_t &yield, int coro_id) {
          */
         goto retry;
       } else {
-        bit_set(machine_mask, primary_mn);
+        // bit_set(machine_mask, primary_mn);
       }
     }
 
