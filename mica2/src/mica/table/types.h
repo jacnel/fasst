@@ -12,6 +12,8 @@ enum class Result {
   kInsufficientSpace,
   kExists,
   kNotFound,
+  kDeleted,
+  kPending,
   kPartialValue,
   kNotProcessed,
   kNotSupported,

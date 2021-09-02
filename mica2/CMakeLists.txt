@@ -3,9 +3,8 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 PROJECT(MICA)
 
 
-SET(CMAKE_CXX_COMPILER g++-5)
-SET(CMAKE_C_LINK_EXECUTABLE g++-5)
-
+SET(CMAKE_CXX_COMPILER g++-9)
+SET(CMAKE_C_LINK_EXECUTABLE g++-9)
 
 
 OPTION(DEBUG "Enable debugging" OFF)
@@ -45,6 +44,7 @@ IF(DEBUG)
 
   MESSAGE(WARNING "Debugging is ENABLED (to disable, run `cmake .. -DDEBUG=OFF`). Performance will be low.")
   ADD_DEFINITIONS(-Og)
+  # ADD_DEFINITIONS(-O0)
 
 ELSE(DEBUG)
 
@@ -90,7 +90,7 @@ IF(DPDK)
   add_definitions(-isystem ${RTE_SDK}/build/include -include rte_config.h)
   link_directories(${LINK_DIRECTORIES} ${RTE_SDK}/build/lib)
   set(LIBRARIES ${LIBRARIES} -Wl,--whole-archive)
-  set(LIBRARIES ${LIBRARIES} rte_kvargs rte_mbuf ethdev rte_malloc rte_mempool rte_ring rte_eal)
+  set(LIBRARIES ${LIBRARIES} rte_kvargs rte_mbuf rte_ethdev rte_mempool rte_ring rte_eal)
   set(LIBRARIES ${LIBRARIES} rte_pmd_i40e rte_pmd_ixgbe rte_pmd_ring)
   set(LIBRARIES ${LIBRARIES} -Wl,--no-whole-archive)
   set(LIBRARIES ${LIBRARIES} rt dl)
@@ -102,13 +102,27 @@ ELSE(DPDK)
 ENDIF(DPDK)
 
 
+IF(SQLITE)
+
+  MESSAGE(STATUS "Sqlite backend support is enabled (to disable, run `cmake .. -DSQLITE=OFF`)")
+  add_definitions(-DUSE_SQLITE)
+  set(LIBRARIES ${LIBRARIES} sqlite3)
+
+ELSE(SQLITE)
+
+  MESSAGE(STATUS "Sqlite backend support is disabled (to enable, run `cmake .. -DSQLITE=ON`)")
+
+ENDIF(SQLITE)
+
+
 
 SET(SOURCES ${SOURCES} src/mica/alloc/hugetlbfs_shm.cc)
 SET(SOURCES ${SOURCES} src/mica/directory/directory_client.cc)
 SET(SOURCES ${SOURCES} src/mica/directory/etcdcpp/etcd_mod.cc)
-SET(SOURCES ${SOURCES} src/mica/transaction/timestamp.cc)
 SET(SOURCES ${SOURCES} src/mica/util/config.cc)
 SET(SOURCES ${SOURCES} src/mica/util/cityhash/city_mod.cc)
+SET(SOURCES ${SOURCES} src/mica/util/siphash/siphash24.c)
+SET_SOURCE_FILES_PROPERTIES(src/mica/util/siphash/siphash24.c PROPERTIES LANGUAGE CXX)
 SET(SOURCES ${SOURCES} src/mica/util/lcore.cc)
 SET(SOURCES ${SOURCES} src/mica/util/stopwatch.cc)
 SET(SOURCES ${SOURCES} src/mica/util/zipf.cc)
@@ -123,9 +137,6 @@ IF(LTO)
 
   ADD_EXECUTABLE(test_table src/mica/test/test_table.cc ${SOURCES})
   TARGET_LINK_LIBRARIES(test_table ${LIBRARIES})
-
-  ADD_EXECUTABLE(test_trie src/mica/test/test_trie.cc ${SOURCES})
-  TARGET_LINK_LIBRARIES(test_trie ${LIBRARIES})
 
   ADD_EXECUTABLE(test_processor src/mica/test/test_processor.cc ${SOURCES})
   TARGET_LINK_LIBRARIES(test_processor ${LIBRARIES})
@@ -142,17 +153,23 @@ IF(LTO)
   ADD_EXECUTABLE(test_rand src/mica/test/test_rand.cc ${SOURCES})
   TARGET_LINK_LIBRARIES(test_rand ${LIBRARIES})
 
+  ADD_EXECUTABLE(test_hash src/mica/test/test_hash.cc ${SOURCES})
+  TARGET_LINK_LIBRARIES(test_hash ${LIBRARIES})
+
   ADD_EXECUTABLE(test_atomics src/mica/test/test_atomics.cc ${SOURCES})
   TARGET_LINK_LIBRARIES(test_atomics ${LIBRARIES})
 
   ADD_EXECUTABLE(test_tsc_sync src/mica/test/test_tsc_sync.cc ${SOURCES})
   TARGET_LINK_LIBRARIES(test_tsc_sync ${LIBRARIES})
 
-  ADD_EXECUTABLE(test_tx src/mica/test/test_tx.cc ${SOURCES})
-  TARGET_LINK_LIBRARIES(test_tx ${LIBRARIES})
+  ADD_EXECUTABLE(test_invalidate src/mica/test/test_invalidate.cc ${SOURCES})
+  TARGET_LINK_LIBRARIES(test_invalidate ${LIBRARIES})
 
   ADD_EXECUTABLE(microbench src/mica/test/microbench.cc ${SOURCES})
   TARGET_LINK_LIBRARIES(microbench ${LIBRARIES})
+
+  ADD_EXECUTABLE(cdf src/mica/test/cdf.cc ${SOURCES})
+  TARGET_LINK_LIBRARIES(cdf ${LIBRARIES})
 
   IF(DPDK)
 
@@ -162,6 +179,13 @@ IF(LTO)
     ADD_EXECUTABLE(netbench src/mica/test/netbench.cc ${SOURCES})
     TARGET_LINK_LIBRARIES(netbench ${LIBRARIES})
 
+    IF(SQLITE)
+
+      ADD_EXECUTABLE(server_sqlite src/mica/test/server_sqlite.cc ${SOURCES})
+      TARGET_LINK_LIBRARIES(server_sqlite ${LIBRARIES})
+
+    ENDIF(SQLITE)
+
   ENDIF(DPDK)
 
 ELSE(LTO)
@@ -170,9 +194,6 @@ ELSE(LTO)
 
   ADD_EXECUTABLE(test_table src/mica/test/test_table.cc)
   TARGET_LINK_LIBRARIES(test_table common ${LIBRARIES})
-
-  ADD_EXECUTABLE(test_trie src/mica/test/test_trie.cc)
-  TARGET_LINK_LIBRARIES(test_trie common ${LIBRARIES})
 
   ADD_EXECUTABLE(test_processor src/mica/test/test_processor.cc)
   TARGET_LINK_LIBRARIES(test_processor common ${LIBRARIES})
@@ -189,17 +210,24 @@ ELSE(LTO)
   ADD_EXECUTABLE(test_rand src/mica/test/test_rand.cc ${SOURCES})
   TARGET_LINK_LIBRARIES(test_rand ${LIBRARIES})
 
+  ADD_EXECUTABLE(test_hash src/mica/test/test_hash.cc ${SOURCES})
+  TARGET_LINK_LIBRARIES(test_hash ${LIBRARIES})
+
   ADD_EXECUTABLE(test_atomics src/mica/test/test_atomics.cc ${SOURCES})
   TARGET_LINK_LIBRARIES(test_atomics ${LIBRARIES})
 
   ADD_EXECUTABLE(test_tsc_sync src/mica/test/test_tsc_sync.cc ${SOURCES})
   TARGET_LINK_LIBRARIES(test_tsc_sync ${LIBRARIES})
 
-  ADD_EXECUTABLE(test_tx src/mica/test/test_tx.cc ${SOURCES})
-  TARGET_LINK_LIBRARIES(test_tx ${LIBRARIES})
+  ADD_EXECUTABLE(test_invalidate src/mica/test/test_invalidate.cc ${SOURCES})
+  TARGET_LINK_LIBRARIES(test_invalidate ${LIBRARIES})
 
   ADD_EXECUTABLE(microbench src/mica/test/microbench.cc)
   TARGET_LINK_LIBRARIES(microbench common ${LIBRARIES})
+
+  ADD_EXECUTABLE(cdf src/mica/test/cdf.cc)
+  TARGET_LINK_LIBRARIES(cdf common ${LIBRARIES})
+
 
   IF(DPDK)
 
@@ -209,7 +237,13 @@ ELSE(LTO)
     ADD_EXECUTABLE(netbench src/mica/test/netbench.cc)
     TARGET_LINK_LIBRARIES(netbench common ${LIBRARIES})
 
+    IF(SQLITE)
+
+      ADD_EXECUTABLE(server_sqlite src/mica/test/server_sqlite.cc)
+      TARGET_LINK_LIBRARIES(server_sqlite common ${LIBRARIES})
+
+    ENDIF(SQLITE)
+
   ENDIF(DPDK)
 
-ENDIF(LTO)
-
+ENDIF()

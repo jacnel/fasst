@@ -5,7 +5,7 @@
   },
 
   "pool": {
-    "size": 1000000000,
+    "size": 100000000,
     "concurrent_read": false,
     "concurrent_write": false,
     "numa_node": 0

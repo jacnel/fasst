@@ -5,9 +5,9 @@
 namespace mica {
 namespace table {
 template <class StaticConfig>
-Result CTable<StaticConfig>::get(uint64_t key_hash, const char* key,
-                                 size_t key_length, char* out_value,
-                                 size_t in_value_length,
+Result CTable<StaticConfig>::get(uint32_t caller_id, uint64_t key_hash,
+                                 const char* key, size_t key_length,
+                                 char* out_value, size_t in_value_length,
                                  size_t* out_value_length,
                                  bool allow_mutation) const {
   assert(key_length <= kMaxKeyLength);
@@ -26,7 +26,7 @@ Result CTable<StaticConfig>::get(uint64_t key_hash, const char* key,
     size_t item_index = find_item_index(bucket, key_hash, tag, key, key_length,
                                         &located_bucket);
     if (item_index == StaticConfig::kBucketSize) {
-      if (version_start != read_version_end(bucket)) continue;
+      if (version_start != read_version_end(bucket)) continue;  // Retry.
       stat_inc(&Stats::get_notfound);
       return Result::kNotFound;
     }
@@ -38,6 +38,7 @@ Result CTable<StaticConfig>::get(uint64_t key_hash, const char* key,
     // here
     const Item* item =
         reinterpret_cast<const Item*>(pool_->get_item(item_offset));
+
     uint32_t kv_length_vec = item->kv_length_vec;
 
     // We used to read key_length again in the old version, but we do not need
@@ -78,26 +79,44 @@ Result CTable<StaticConfig>::get(uint64_t key_hash, const char* key,
         // different key was inserted, we delete innocent key, but without any
         // fatal issue. this will slow down query speed for outdated matching
         // key at first, but improves it later by skipping the value copy step
-        mut_this->lock_bucket(mut_bucket);
+        mut_this->lock_bucket(mut_bucket, caller_id);
         if (located_bucket->item_vec[item_index] != 0) {
           mut_located_bucket->item_vec[item_index] = 0;
           stat_dec(&Stats::count);
         }
-        mut_this->unlock_bucket(mut_bucket);
+        mut_this->unlock_bucket(mut_bucket, caller_id);
       }
 
       stat_inc(&Stats::get_notfound);
       return Result::kNotFound;
     }
 
+    bool is_deleted = item->deleted;
+    bool is_pending = item->pending;
     if (version_start != read_version_end(bucket)) continue;
+
+    // Check if the item was deleted.
+    //
+    // Since we read item->deleted before checking if the versions match, it is
+    // guaranteed at this moment that the read was consistent. In which case, we
+    // return that the item is currently deleted.
+    if (is_deleted) {
+      //+ Add stat.
+      return Result::kDeleted;
+    }
+
+    if (is_pending) {
+      //+ Add stat.
+      return Result::kPending;
+    }
 
     stat_inc(&Stats::get_found);
 
     if (allow_mutation)
       const_cast<CTable<StaticConfig>*>(this)->move_to_head(
-          const_cast<Bucket*>(bucket), const_cast<Bucket*>(located_bucket),
-          item, key_length, value_length, item_index, item_vec, item_offset);
+          caller_id, const_cast<Bucket*>(bucket),
+          const_cast<Bucket*>(located_bucket), item, key_length, value_length,
+          item_index, item_vec, item_offset);
 
     break;
   }
@@ -107,7 +126,8 @@ Result CTable<StaticConfig>::get(uint64_t key_hash, const char* key,
   else
     return Result::kSuccess;
 }
-}
-}
+
+}  // namespace table
+}  // namespace mica
 
 #endif

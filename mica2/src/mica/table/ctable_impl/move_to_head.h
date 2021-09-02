@@ -5,7 +5,8 @@
 namespace mica {
 namespace table {
 template <class StaticConfig>
-void CTable<StaticConfig>::move_to_head(Bucket* bucket, Bucket* located_bucket,
+void CTable<StaticConfig>::move_to_head(uint32_t caller_id, Bucket* bucket,
+                                        Bucket* located_bucket,
                                         const Item* item, size_t key_length,
                                         size_t value_length, size_t item_index,
                                         uint64_t item_vec,
@@ -33,7 +34,7 @@ void CTable<StaticConfig>::move_to_head(Bucket* bucket, Bucket* located_bucket,
       (Specialization::get_tail(pool_) - item_offset) &
       Specialization::get_mask(pool_);
   if (distance_from_tail > mth_threshold_) {
-    lock_bucket(bucket);
+    lock_bucket(bucket, caller_id);
     pool_->lock();
 
     // check if the original item is still there
@@ -63,15 +64,15 @@ void CTable<StaticConfig>::move_to_head(Bucket* bucket, Bucket* located_bucket,
 
       // we need to hold the lock until we finish writing
       pool_->unlock();
-      unlock_bucket(bucket);
+      unlock_bucket(bucket, caller_id);
 
       // XXX: this may be too late; before cleaning, other threads may
       // have read some invalid location
       //      ideally, this should be done before writing actual data
-      cleanup_bucket(new_item_offset, new_tail);
+      cleanup_bucket(caller_id, new_item_offset, new_tail);
     } else {
       pool_->unlock();
-      unlock_bucket(bucket);
+      unlock_bucket(bucket, caller_id);
 
       // failed -- original data become invalid in the table
       stat_inc(&Stats::move_to_head_failed);
@@ -80,7 +81,7 @@ void CTable<StaticConfig>::move_to_head(Bucket* bucket, Bucket* located_bucket,
     stat_inc(&Stats::move_to_head_skipped);
   }
 }
-}
-}
+}  // namespace table
+}  // namespace mica
 
 #endif

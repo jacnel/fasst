@@ -33,7 +33,7 @@ void CTable<StaticConfig>::prefetch_pool(uint64_t key_hash) const {
     pool_->prefetch_item(get_item_offset(item_vec));
   }
 }
-}
-}
+}  // namespace table
+}  // namespace mica
 
 #endif

@@ -5,7 +5,6 @@
 #include <iostream>
 
 struct CTableConfig : public ::mica::table::BasicLossyCTableConfig {
-  // struct LTableConfig : public ::mica::table::BasicLosslessLTableConfig {
   static constexpr bool kCollectStats = true;
 };
 
@@ -49,21 +48,36 @@ int main() {
     key_i = i;
     value_i = -i;
     uint64_t key_hash = hash(&key_i, sizeof(key_i));
-    table.set(key_hash, key, sizeof(key_i), value, sizeof(value_i), false);
+    uint64_t curr_version;
+    Result res;
+
+    res = table.prepare(key_hash, key, sizeof(key_i), sizeof(value_i),
+                        &curr_version);
+    assert(res == Result::kSuccess);
+    res = table.finalize(key_hash, key, sizeof(key_i), value, sizeof(value_i),
+                         curr_version, /*deleted=*/false);
+    assert(res == Result::kSuccess);
 
     // Immediately set again to make the item modified.
     value_i = i + 1;
     key_hash = hash(&key_i, sizeof(key_i));
-    table.set(key_hash, key, sizeof(key_i), value, sizeof(value_i), true);
+    if (i % 2 == 0) {
+      res = table.update(key_hash, key, sizeof(key_i), value, sizeof(value_i));
+      assert(res == Result::kSuccess);
+    } else {
+      res = table.del(key_hash, key, sizeof(key_i));
+      assert(res == Result::kSuccess);
+    }
   }
 
   for (size_t i = 0; i < num_items; i++) {
     key_i = i;
     size_t value_len;
+    uint64_t version;
     uint64_t key_hash = hash(&key_i, sizeof(key_i));
 
     if (table.get(key_hash, key, sizeof(key_i), value, sizeof(value_i),
-                  &value_len, false) == Result::kSuccess)
+                  &value_len, &version, false) == Result::kSuccess)
       success_count++;
     else {
       if (!first_failure) {

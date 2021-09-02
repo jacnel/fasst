@@ -7,7 +7,7 @@
 class CacheManager {
  public:
   // Adds a cache for a given request type, if none exists already.
-  bool RegisterCache(rpc_reqtype_t req_type, Cache* cache) {
+  bool register_cache(rpc_reqtype_t req_type, Cache* cache) {
     if (cache_map_.find(req_type) != cache_map_.end()) {
       // Already registered
       return false;
@@ -18,7 +18,7 @@ class CacheManager {
 
   // Returns the cache associated with a given request type, or nullptr if none
   // exists. Used by the transaction manager to lookup the cache to use.
-  Cache* GetCache(rpc_reqtype_t req_type) {
+  Cache* get_cache(rpc_reqtype_t req_type) {
     auto cache_iter = cache_map_.find(req_type);
     if (cache_iter == cache_map_.end()) {
       // Already registered

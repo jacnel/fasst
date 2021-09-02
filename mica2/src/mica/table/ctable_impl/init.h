@@ -65,6 +65,7 @@ CTable<StaticConfig>::CTable(const ::mica::util::Config& config, Alloc* alloc,
   ::mica::util::memset(buckets_, 0,
                        sizeof(Bucket) * (num_buckets_ + num_extra_buckets_));
 
+  //+ Cleanup concurrent mode code.
   if (!concurrent_read)
     concurrent_access_mode_ = 0;
   else if (concurrent_read && !concurrent_write)

@@ -29,31 +29,111 @@ uint16_t CTable<StaticConfig>::calc_tag(uint64_t key_hash) {
     return tag;
 }
 
+// Used to create a new pending item. Zero's out the value?
 template <class StaticConfig>
-void CTable<StaticConfig>::set_item(Item* item, uint64_t key_hash,
-                                    const char* key, uint32_t key_length,
-                                    const char* value, uint32_t value_length) {
+void CTable<StaticConfig>::set_pending_item(Item* item, uint64_t key_hash,
+                                            const char* key,
+                                            uint32_t key_length,
+                                            uint32_t value_length) {
   assert(key_length <= Item::kKeyMask);
   assert(value_length <= Item::kValueMask);
 
   item->kv_length_vec = make_kv_length_vec(key_length, value_length);
   item->key_hash = key_hash;
   item->modified = false;
+  item->pending = true;
+  item->deleted = false;
+  ::mica::util::memcpy<8>(item->data, key, key_length);
+
+  // // A pending entry has no value by definition.
+  // ::mica::util::memset<8>(item->data + ::mica::util::roundup<8>(key_length),
+  // 0,
+  //                         value_length);
+}
+
+// Used to finalize a new item in the cache when the actual size is greater than
+// the prepared entry size.
+template <class StaticConfig>
+void CTable<StaticConfig>::set_new_item(Item* item, uint64_t key_hash,
+                                        const char* key, uint32_t key_length,
+                                        const char* value,
+                                        uint32_t value_length, bool deleted) {
+  assert(key_length <= Item::kKeyMask);
+  assert(value_length <= Item::kValueMask);
+
+  item->key_hash = key_hash;
+  item->modified = false;
+  item->pending = false;
+  item->deleted = deleted;
+
+  if (!deleted) {
+    item->kv_length_vec = make_kv_length_vec(key_length, value_length);
+    ::mica::util::memcpy<8>(item->data, key, key_length);
+    ::mica::util::memcpy<8>(item->data + ::mica::util::roundup<8>(key_length),
+                            value, value_length);
+  }
+}
+
+// Used to update an item that exists in the cache already but whose value is
+// too small.
+template <class StaticConfig>
+void CTable<StaticConfig>::set_updated_item(Item* item, uint64_t key_hash,
+                                            const char* key,
+                                            uint32_t key_length,
+                                            const char* value,
+                                            uint32_t value_length) {
+  assert(key_length <= Item::kKeyMask);
+  assert(value_length <= Item::kValueMask);
+
+  item->kv_length_vec = make_kv_length_vec(key_length, value_length);
+  item->key_hash = key_hash;
+  item->modified = true;
+  item->pending = false;
+  item->deleted = false;
   ::mica::util::memcpy<8>(item->data, key, key_length);
   ::mica::util::memcpy<8>(item->data + ::mica::util::roundup<8>(key_length),
                           value, value_length);
 }
 
+// Used to set the value of a prepared item when the existing size is
+// sufficient.
 template <class StaticConfig>
-void CTable<StaticConfig>::set_item_value(Item* item, const char* value,
-                                          uint32_t value_length) {
+void CTable<StaticConfig>::finalize_item_value(Item* item, const char* value,
+                                               uint32_t value_length,
+                                               bool deleted) {
   assert(value_length <= Item::kValueMask);
+  assert(item->pending);
 
-  uint32_t key_length = get_key_length(item->kv_length_vec);
-  item->kv_length_vec = make_kv_length_vec(key_length, value_length);
-  ::mica::util::memcpy<8>(item->data + ::mica::util::roundup<8>(key_length),
-                          value, value_length);
+  if (!deleted) {
+    uint32_t key_length = get_key_length(item->kv_length_vec);
+    item->kv_length_vec = make_kv_length_vec(key_length, value_length);
+    ::mica::util::memcpy<8>(item->data + ::mica::util::roundup<8>(key_length),
+                            value, value_length);
+  }
+
+  item->modified = false;
+  item->pending = false;
+  item->deleted = deleted;
+}
+
+// Used to update an existing item when the value size is sufficient.
+template <class StaticConfig>
+void CTable<StaticConfig>::update_item_value(Item* item, const char* value,
+                                             uint32_t value_length,
+                                             bool deleted) {
+  assert(value_length <= Item::kValueMask);
+  assert(!item->pending);
+
+  if (!deleted) {
+    uint32_t key_length = get_key_length(item->kv_length_vec);
+    item->kv_length_vec = make_kv_length_vec(key_length, value_length);
+    ::mica::util::memcpy<8>(item->data + ::mica::util::roundup<8>(key_length),
+                            value, value_length);
+  }
+
   item->modified = true;
+  item->pending = false;
+  item->deleted = deleted;
 }
 
 template <class StaticConfig>

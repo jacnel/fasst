@@ -58,7 +58,7 @@ struct BasicLossyCTableConfig : public BasicCTableConfig {
   // The memory allocator type.
   typedef Pool::Alloc Alloc;
 
-  // The eviction callback signature
+  // The eviction callback signature that accepts the key and value
   typedef std::function<void(const char*, size_t, const char*, size_t)>
       EvictionCallback;
 };
@@ -86,35 +86,41 @@ class CTable : public TableInterface {
 
   void reset();
 
-  // ctable_impl/del.h
-  Result del(uint64_t key_hash, const char* key, size_t key_length);
+  // ctable_impl/placeholder.h
+  Result placeholder(uint32_t caller_id, uint64_t key_hash, const char* key,
+                     size_t key_length, size_t value_length,
+                     uint64_t* out_bucket_version);
+
+  // ctable_impl/prepare_read.h
+  Result prepare_read(uint32_t caller_id, uint64_t key_hash, const char* key,
+                      size_t key_length, const char* value, size_t value_length,
+                      uint64_t expected_bucket_version, bool deleted);
 
   // ctable_impl/get.h
-  Result get(uint64_t key_hash, const char* key, size_t key_length,
-             char* out_value, size_t in_value_length, size_t* out_value_length,
-             bool allow_mutation) const;
+  Result get(uint32_t caller_id, uint64_t key_hash, const char* key,
+             size_t key_length, char* out_value, size_t in_value_length,
+             size_t* out_value_length, bool allow_mutation) const;
 
-  // ctable_impl/increment.h
-  Result increment(uint64_t key_hash, const char* key, size_t key_length,
-                   uint64_t increment, uint64_t* out_value);
+  // ctable_impl/prepare_write.h
+  Result prepare_write(uint32_t caller_id, uint64_t key_hash, const char* key,
+                       size_t key_length, const char* value,
+                       size_t value_length, uint64_t expected_bucket_version,
+                       bool deleted);
 
-  // ctable_impl/set.h
-  Result set(uint64_t key_hash, const char* key, size_t key_length,
-             const char* value, size_t value_length, bool overwrite);
+  // ctable_impl/abort_write.h
+  Result abort_write(uint32_t caller_id, uint64_t key_hash);
 
-  // ctable_impl/prepare.h
-  Result prepare(uint64_t key_hash, uint32_t* out_bucket_version);
+  // ctable_impl/update.h
+  Result commit_update(uint32_t caller_id, uint64_t key_hash, const char* key,
+                       size_t key_length, const char* value,
+                       size_t value_length);
 
-  // ctable_impl/cache.h
-  Result cache(uint64_t key_hash, const char* key, size_t key_length,
-               const char* value, size_t value_length,
-               uint32_t expected_bucket_version);
+  // ctable_impl/del.h
+  Result commit_del(uint32_t caller_id, uint64_t key_hash, const char* key,
+                    size_t key_length);
 
   // ctable_impl/invalidate.h
-  Result invalidate(uint64_t key_hash);
-
-  // ctable_impl/test.h
-  Result test(uint64_t key_hash, const char* key, size_t key_length) const;
+  Result invalidate(uint32_t caller_id, uint64_t key_hash);
 
   // ctable_impl/prefetch.h
   void prefetch_table(uint64_t key_hash) const;
@@ -132,10 +138,15 @@ class CTable : public TableInterface {
     uint32_t kv_length_vec;  // key_length: 8, value_length: 24; kv_length_vec
                              // == 0: empty item
 
-    // the rest is meaningful only when kv_length_vec != 0
-    // uint32_t expire_time;
-    uint16_t reserved0;
-    uint8_t reserved1;
+    uint8_t reserved;
+
+    // Used to determine if item is used as a tombstone to represent a
+    // non-existent item.
+    bool deleted;
+
+    // Used to know whether an item is in a pending state. False if the value
+    // has been set.
+    bool pending;
 
     // Used to keep track of inplace updates to inform which items to execute
     // the eviction callback function on.
@@ -150,15 +161,17 @@ class CTable : public TableInterface {
   static_assert(sizeof(Item) == 16, "Invalid size for type Item");
 
   struct Bucket {
-    uint32_t incarnation;
     uint32_t next_extra_bucket_index;  // 1-base; 0 = no extra bucket
-    uint64_t version;                  // XXX: is uint32_t wide enough?
+    uint32_t locker_id;
+    uint64_t version;
     uint64_t item_vec[StaticConfig::kBucketSize];
 
     // 16: tag (1-base)
     // 48: item offset
     // item == 0: empty item
 
+    static constexpr uint32_t kInvalidLockerID =
+        std::numeric_limits<uint32_t>::max();
     static constexpr uint64_t kTagMask = (uint64_t(1) << 16) - 1;
     static constexpr uint64_t kItemOffsetMask = (uint64_t(1) << 48) - 1;
   };
@@ -216,7 +229,7 @@ class CTable : public TableInterface {
   size_t find_same_tag(const Bucket* bucket, uint16_t tag,
                        const Bucket** located_bucket) const;
   size_t find_same_tag(Bucket* bucket, uint16_t tag, Bucket** located_bucket);
-  void cleanup_bucket(uint64_t old_tail, uint64_t new_tail);
+  void cleanup_bucket(uint32_t caller_id, uint64_t old_tail, uint64_t new_tail);
   void cleanup_all();
 
   // ctable_impl/info.h
@@ -230,26 +243,39 @@ class CTable : public TableInterface {
   static uint32_t make_kv_length_vec(uint32_t key_length,
                                      uint32_t value_length);
   static uint16_t calc_tag(uint64_t key_hash);
-  static void set_item(Item* item, uint64_t key_hash, const char* key,
-                       uint32_t key_length, const char* value,
-                       uint32_t value_length);
-  static void set_item_value(Item* item, const char* value,
-                             uint32_t value_length);
+
+  static void set_pending_item(Item* item, uint64_t key_hash, const char* key,
+                               uint32_t key_length, uint32_t value_length);
+  static void set_new_item(Item* item, uint64_t key_hash, const char* key,
+                           uint32_t key_length, const char* value,
+                           uint32_t value_length, bool deleted);
+  static void set_updated_item(Item* item, uint64_t key_hash, const char* key,
+                               uint32_t key_length, const char* value,
+                               uint32_t value_length);
+  static void finalize_item_value(Item* item, const char* value,
+                                  uint32_t value_length, bool deleted);
+  static void update_item_value(Item* item, const char* value,
+                                uint32_t value_length, bool deleted);
+
   static bool compare_keys(const char* key1, size_t key1_len, const char* key2,
                            size_t key2_len);
 
   // ctable_impl/move_to_head.h
-  void move_to_head(Bucket* bucket, Bucket* located_bucket, const Item* item,
-                    size_t key_length, size_t value_length, size_t item_index,
-                    uint64_t item_vec, uint64_t item_offset);
+  void move_to_head(uint32_t caller_id, Bucket* bucket, Bucket* located_bucket,
+                    const Item* item, size_t key_length, size_t value_length,
+                    size_t item_index, uint64_t item_vec, uint64_t item_offset);
 
   // ctable_impl/lock.h
-  void lock_bucket(Bucket* bucket);
-  void unlock_bucket(Bucket* bucket);
+  bool try_lock_bucket(Bucket* bucket, uint32_t locker_id);
+  void lock_bucket(Bucket* bucket, uint32_t locker_id);
+  void unlock_bucket(Bucket* bucket, uint32_t locker_id);
+  bool is_locked(Bucket* bucket, uint32_t* out_locker_id);
   void lock_extra_bucket_free_list();
   void unlock_extra_bucket_free_list();
   uint64_t read_version_begin(const Bucket* bucket) const;
   uint64_t read_version_end(const Bucket* bucket) const;
+  uint64_t get_version(const Bucket* bucket) const;
+  uint64_t get_next_version(const Bucket* bucket) const;
 
   ::mica::util::Config config_;
   Alloc* alloc_;
@@ -283,20 +309,24 @@ class CTable : public TableInterface {
 }  // namespace table
 }  // namespace mica
 
-#include "mica/table/ctable_impl/bucket.h"
-#include "mica/table/ctable_impl/del.h"
-#include "mica/table/ctable_impl/get.h"
-#include "mica/table/ctable_impl/increment.h"
-#include "mica/table/ctable_impl/info.h"
-#include "mica/table/ctable_impl/init.h"
 #include "mica/table/ctable_impl/item.h"
+#include "mica/table/ctable_impl/bucket.h"
 #include "mica/table/ctable_impl/lock.h"
+#include "mica/table/ctable_impl/init.h"
+
+#include "mica/table/ctable_impl/info.h"
 #include "mica/table/ctable_impl/move_to_head.h"
 #include "mica/table/ctable_impl/prefetch.h"
-#include "mica/table/ctable_impl/set.h"
-#include "mica/table/ctable_impl/prepare.h"
-#include "mica/table/ctable_impl/cache.h"
+
+#include "mica/table/ctable_impl/placeholder.h"
+
+#include "mica/table/ctable_impl/prepare_read.h"
+#include "mica/table/ctable_impl/get.h"
+
+#include "mica/table/ctable_impl/abort_write.h"
+#include "mica/table/ctable_impl/prepare_write.h"
+#include "mica/table/ctable_impl/commit_update.h"
+#include "mica/table/ctable_impl/commit_del.h"
 #include "mica/table/ctable_impl/invalidate.h"
-#include "mica/table/ctable_impl/test.h"
 
 #endif

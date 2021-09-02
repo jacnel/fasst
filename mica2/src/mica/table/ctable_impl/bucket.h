@@ -318,7 +318,7 @@ size_t CTable<StaticConfig>::find_same_tag(Bucket* bucket, uint16_t tag,
 }
 
 template <class StaticConfig>
-void CTable<StaticConfig>::cleanup_bucket(uint64_t old_tail,
+void CTable<StaticConfig>::cleanup_bucket(uint32_t caller_id, uint64_t old_tail,
                                           uint64_t new_tail) {
   if (!std::is_base_of<::mica::pool::CircularLogTag,
                        typename Pool::Tag>::value) {
@@ -340,7 +340,7 @@ void CTable<StaticConfig>::cleanup_bucket(uint64_t old_tail,
     if (StaticConfig::kVerbose) printf("cleanup bucket: %lu\n", bucket_index);
     Bucket* bucket = buckets_ + bucket_index;
 
-    lock_bucket(bucket);
+    lock_bucket(bucket, caller_id);
 
     Bucket* current_bucket = bucket;
     while (true) {
@@ -362,7 +362,7 @@ void CTable<StaticConfig>::cleanup_bucket(uint64_t old_tail,
           get_extra_bucket(current_bucket->next_extra_bucket_index);
     }
 
-    unlock_bucket(bucket);
+    unlock_bucket(bucket, caller_id);
     bucket_index = (bucket_index + 1UL) & num_buckets_mask_;
   }
 }
