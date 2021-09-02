@@ -2,9 +2,16 @@
   "alloc": {
   },
 
+  "pool": {
+    "size": 100000,
+    "concurrent_read": true,
+    "concurrent_write": true,
+    "numa_node": 0
+  },
+
   "table": {
     "name": "cache_table",
-    "item_count": 30000000,
+    "item_count": 30000,
     "concurrent_read": true,
     "concurrent_write": true,
     "numa_node": 0
