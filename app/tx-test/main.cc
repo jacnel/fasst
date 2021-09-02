@@ -90,7 +90,8 @@ int main(int argc, char *argv[]) {
     dir_args.machine_id = machine_id;
     dir_args.num_clients = num_machines;
     dir_args.num_dirs = num_machines;
-    dir_args.port_index = 1;  //+ Make runtime argument.
+    dir_args.port_index = 1;          //+ Make runtime argument.
+    dir_args.num_entries = 30000000;  //+ Make config.
     directory = new Directory(dir_args);
 
     // Setup cache.
