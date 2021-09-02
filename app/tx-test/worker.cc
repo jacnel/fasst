@@ -497,7 +497,7 @@ void run_thread(struct thread_params *params) {
   logger = new Logger(wrkr_gid, wrkr_lid, num_machines, num_coro);
 
   cache_mgr = new CacheManager();
-  cache_mgr->register_cache(RPC_MICA_REQ, thread_params.cache);
+  cache_mgr->register_cache(RPC_MICA_REQ, thread_params->cache);
 
   dir_args_t dir_args;
   dir_args.machine_id = mappings->machine_id;
