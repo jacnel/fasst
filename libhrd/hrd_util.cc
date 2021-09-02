@@ -146,7 +146,7 @@ void *hrd_malloc_socket(int shm_key, int size, int socket_id) {
             " (SHM key = %d)\n",
             shm_key);
         break;
-      case EINVAL:
+     case EINVAL:
         hrd_red_printf(
             "HRD: SHM malloc error: SHMMAX/SHMIN mismatch."
             " (SHM key = %d, size = %d)\n",
