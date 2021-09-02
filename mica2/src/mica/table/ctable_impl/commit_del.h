@@ -22,7 +22,7 @@ Result CTable<StaticConfig>::commit_del(uint32_t caller_id, uint64_t key_hash,
 
   // The bucket must be previously locked during prepare_write()
   uint32_t out_locker_id;
-  if (!is_locked(bucket, &caller_id) && caller_id != out_locker_id) {
+  if (!is_locked(bucket, &out_locker_id) && caller_id != out_locker_id) {
     return Result::kError;
   }
 
