@@ -5,7 +5,7 @@ LD := ${CXX}
 
 # Flags to enable link-time optimization and GDB
 LTO := -flto
-ENABLE_DGB :=
+ENABLE_DGB := 
 
 HOTS_HOME := ../..
 MICA_HOME := ../../mica2/src
@@ -19,11 +19,11 @@ INC	:= -I ${HOTS_HOME} -I ${MICA_HOME} -I ${BOOST_INC} ${BOOST_WARN}
 LDPATH := -L${BOOST_LD}
 
 # DEBUG := -DNDEBUG
-CPPFLAGS := ${ENABLE_DGB} ${LTO} -O3 ${DEBUG} -std=c++11 ${INC} -Wall -Werror \
+CPPFLAGS := ${ENABLE_DGB} ${LTO} -g -O0 ${DEBUG} -std=c++11 ${INC} -Wall -Werror \
 	-Wno-unused-result -Wno-unused-value -Wno-unused-function \
 	-Wno-class-memaccess -Wno-deprecated-declarations -Winline -faligned-new
 
-LDFLAGS := ${ENABLE_DGB} ${LTO} -O3 ${LDPATH} -libverbs -lrt -pthread -lmemcached -lnuma \
+LDFLAGS := ${ENABLE_DGB} ${LTO} -Og ${LDPATH} -libverbs -lrt -pthread -lmemcached -lnuma \
 	-lpapi -lboost_system -lboost_coroutine -lboost_thread -lboost_context
 
 src := ${HOTS_HOME}/libhrd/hrd_conn.o ${HOTS_HOME}/libhrd/hrd_util.o \

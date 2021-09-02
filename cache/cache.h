@@ -69,9 +69,9 @@ forceinline Cache *cache_init(std::string config_filepath,
   }
 
   CTableConfig::Alloc *alloc = new CTableConfig::Alloc(config.get("alloc"));
-  CTableConfig::Pool *pool = new CTableConfig::Pool(config, alloc);
+  CTableConfig::Pool *pool = new CTableConfig::Pool(config.get("pool"), alloc);
 
-  Cache *cache = new Cache(config, alloc, pool, callback);
+  Cache *cache = new Cache(config.get("table"), alloc, pool, callback);
   return cache;
 }
 
