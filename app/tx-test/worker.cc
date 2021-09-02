@@ -247,7 +247,8 @@ void slave_func(coro_yield_t &yield, int coro_id) {
   _unused(tx_end_time); /* If MEASURE_LATENCY = 0 */
 
   /* DO NOT use rpc after this point. It belongs to tx/ now */
-  Tx *tx = new Tx(coro_id, rpc, mappings, logger, cache_mgr, dir_client, coro_arr);
+  Tx *tx =
+      new Tx(coro_id, rpc, mappings, logger, cache_mgr, dir_client, coro_arr);
 
   hots_key_t *key_arr = new hots_key_t[read_set_size]; /* Input to tx */
   hots_obj_t *obj_arr = new hots_obj_t[read_set_size]; /* Output from tx/ */
@@ -496,6 +497,7 @@ void run_thread(struct thread_params *params) {
   logger = new Logger(wrkr_gid, wrkr_lid, num_machines, num_coro);
 
   cache_mgr = new CacheManager();
+  cache_mgr.register_cache(RPC_MICA_REQ, thread_params.cache);
 
   dir_args_t dir_args;
   dir_args.machine_id = mappings->machine_id;
