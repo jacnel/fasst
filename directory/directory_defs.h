@@ -26,6 +26,7 @@ struct dir_args_t {
   int machine_id;
   int num_clients;
   int num_dirs;
+  int num_entries;
   int port_index;
 };
 

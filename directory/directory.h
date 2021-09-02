@@ -24,15 +24,15 @@ class Directory {
 
  public:
   Directory(struct dir_args_t args) : info(args) {
-    cb = hrd_ctrl_blk_init(
-        info.machine_id,     /* local hid */
-        info.port_index, 0,  /* port index, numa node */
-        info.num_clients, 0, /* conn qps, UC */
-        NULL,
-        directory_size(DIRECTORY_MAX_ENTRIES), /* conn prealloc buf, buf size */
-        DIRECTORY_SHM_KEY,                     /* conn buf shm key */
-        NULL, 0, 0, /* dgram prealloc buf, dgram qps, buf size */
-        -1);        /* dgram buf shm key */
+    cb = hrd_ctrl_blk_init(info.machine_id,     /* local hid */
+                           info.port_index, 0,  /* port index, numa node */
+                           info.num_clients, 0, /* conn qps, UC */
+                           NULL,                /* conn prealloc buf */
+                           directory_size(args.num_entries), /* buf size */
+                           DIRECTORY_SHM_KEY, /* conn buf shm key */
+                           NULL, 0, /* dgram prealloc buf, dgram qps */
+                           0,       /* buf size */
+                           -1);     /* dgram buf shm key */
   }
 };
 
