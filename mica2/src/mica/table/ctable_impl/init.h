@@ -64,7 +64,7 @@ CTable<StaticConfig>::CTable(const ::mica::util::Config& config, Alloc* alloc,
   // entries in the buckets. Then reset the locker_id to invalid.
   ::mica::util::memset(buckets_, 0,
                        sizeof(Bucket) * (num_buckets_ + num_extra_buckets_));
-  for (int i = 0 ; i < num_buckets_ + num_extra_buckets; ++i) {
+  for (int i = 0 ; i < num_buckets_ + num_extra_buckets_; ++i) {
     buckets_[i].locker_id = Bucket::kInvalidLockerID;
   }
 
