@@ -43,6 +43,7 @@ int main(int argc, char *argv[]) {
     }
     switch (c) {
       case 'm':
+        assert(optarg != nullptr);
         machine_id = atoi(optarg);
         break;
       default:
