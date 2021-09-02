@@ -11,7 +11,7 @@
 	"num_backups": 2,
 	"use_lock_server": false,
 	"num_locks_kilo": 512,
-	"num_keys_kilo": 30,
+	"num_keys_kilo": 10,
 	"val_size": 40,
 	"zipf_theta": 0.9,
 	"read_set_size": 3,

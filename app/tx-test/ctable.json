@@ -1,5 +1,8 @@
 {
   "alloc": {
+    "num_pages_to_init": 512,
+    "clean_files_on_init": true,
+    "verbose": true
   },
 
   "pool": {

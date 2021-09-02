@@ -629,9 +629,9 @@ void hrd_publish_dgram_qp(struct hrd_ctrl_blk *cb, int n, const char *qp_name) {
 
   // For RoCE compatability.
   qp_attr.interface_id =
-      hrd_get_interface_id(cb->conn_qp[n]->context, cb->dev_port_id);
+      hrd_get_interface_id(cb->dgram_qp[n]->context, cb->dev_port_id);
   qp_attr.subnet_prefix =
-      hrd_get_subnet_prefix(cb->conn_qp[n]->context, cb->dev_port_id);
+      hrd_get_subnet_prefix(cb->dgram_qp[n]->context, cb->dev_port_id);
 
   hrd_publish(qp_attr.name, &qp_attr, sizeof(struct hrd_qp_attr));
 }
