@@ -223,7 +223,7 @@ int hrd_free(int shm_key, void *shm_buf) {
 
 /* Like printf, but red. Limited to 1000 characters. */
 void hrd_red_printf(const char *format, ...) {
-#define RED_LIM 1000
+#define RED_LIM 988
   va_list args;
   int i;
 
