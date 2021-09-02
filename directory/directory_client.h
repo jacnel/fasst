@@ -51,6 +51,7 @@ class DirectoryClient {
       hrd_publish_conn_qp(cb, i, name);
     }
 
+    qp_attrs = new hrd_qp_attr[info.num_dirs];
     for (int i = 0; i < info.num_dirs; ++i) {
       char name[HRD_QP_NAME_SIZE];
       sprintf(name, "for-cleint-%d-from-directory-%d", mappings_->machine_id,
