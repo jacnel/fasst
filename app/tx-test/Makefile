@@ -1,6 +1,6 @@
 all: main
 
-CXX := g++-9
+CXX := g++
 LD := ${CXX}
 
 # Flags to enable link-time optimization and GDB
