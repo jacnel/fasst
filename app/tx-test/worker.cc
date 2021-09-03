@@ -506,6 +506,7 @@ void run_thread(struct thread_params *params) {
   dir_args.num_entries = 30000;
   dir_args.port_index = 0;
   dir_client = new DirectoryClient(dir_args, mappings);
+  dir_client->connect();
 
   printf("Worker %d: starting. Am I lock server = %d\n", wrkr_gid,
          mappings->am_i_lock_server);

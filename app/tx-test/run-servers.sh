@@ -26,10 +26,11 @@ if [ "$1" -eq 0 ]; then
 	sleep 1
 fi
 
-sudo LD_LIBRARY_PATH=/usr/local/lib/ -E \
-	numactl --membind=0 ./main \
-	--machine-id $1 &
+# numactl --membind=0
 
-sleep 10000000
+sudo LD_LIBRARY_PATH=/usr/local/lib/ -E \
+	gdb --command=gdb.txt --args  ./main \
+	--machine-id $1 
+
 
 # Debug: run --num-threads 1 --num-coro 2 --base-port-index 0 --num-ports 2 --num-qps 1 --machine-id 0 --postlist 16 --numa-node 0 --num-keys-millions 1 --val-size 32

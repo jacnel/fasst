@@ -33,6 +33,25 @@ class Directory {
                            NULL, 0, /* dgram prealloc buf, dgram qps */
                            0,       /* buf size */
                            -1);     /* dgram buf shm key */
+
+    for (int i = 0; i < info.num_clients; ++i) {
+      char name[HRD_QP_NAME_SIZE];
+      sprintf(name, "for-client-%d-from-directory-%d", i, info.machine_id);
+      hrd_publish_conn_qp(cb, i, name);
+      hrd_publish_ready(name);
+    }
+  }
+
+  void connect() {
+    hrd_qp_attr** qp_attrs = new hrd_qp_attr*[info.num_clients];
+    for (int i = 0; i < info.num_clients; ++i) {
+      char name[HRD_QP_NAME_SIZE];
+      sprintf(name, "for-directory-%d-from-client-%d", info.machine_id, i);
+      hrd_wait_till_ready(name);
+      qp_attrs[i] = hrd_get_published_qp(name);
+      assert(qp_attrs[i] != nullptr);
+      hrd_connect_qp(cb, i, qp_attrs[i]);
+    }
   }
 };
 

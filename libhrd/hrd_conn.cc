@@ -448,7 +448,7 @@ void hrd_connect_qp(struct hrd_ctrl_blk *cb, int n,
   struct ibv_qp_attr conn_attr;
   memset(&conn_attr, 0, sizeof(struct ibv_qp_attr));
   conn_attr.qp_state = IBV_QPS_RTR;
-  conn_attr.path_mtu = IBV_MTU_4096;
+  conn_attr.path_mtu = IBV_MTU_512;
   conn_attr.dest_qp_num = remote_qp_attr->qpn;
   conn_attr.rq_psn = HRD_DEFAULT_PSN;
 
@@ -474,13 +474,13 @@ void hrd_connect_qp(struct hrd_ctrl_blk *cb, int n,
                   IBV_QP_RQ_PSN;
 
   if (!cb->use_uc) {
-    conn_attr.max_dest_rd_atomic = 16;
+    conn_attr.max_dest_rd_atomic = 1;
     conn_attr.min_rnr_timer = 12;
     rtr_flags |= IBV_QP_MAX_DEST_RD_ATOMIC | IBV_QP_MIN_RNR_TIMER;
   }
 
   if (ibv_modify_qp(cb->conn_qp[n], &conn_attr, rtr_flags)) {
-    fprintf(stderr, "HRD: Failed to modify QP to RTR\n");
+    fprintf(stderr, "HRD: Failed to modify QP to RTR: %s\n", strerror(errno));
     assert(false);
   }
 
@@ -494,8 +494,8 @@ void hrd_connect_qp(struct hrd_ctrl_blk *cb, int n,
     conn_attr.timeout = 14;
     conn_attr.retry_cnt = 7;
     conn_attr.rnr_retry = 7;
-    conn_attr.max_rd_atomic = 16;
-    conn_attr.max_dest_rd_atomic = 16;
+    conn_attr.max_rd_atomic = 1;
+    // conn_attr.max_dest_rd_atomic = 16;
     rts_flags |= IBV_QP_TIMEOUT | IBV_QP_RETRY_CNT | IBV_QP_RNR_RETRY |
                  IBV_QP_MAX_QP_RD_ATOMIC;
   }

@@ -34,13 +34,14 @@ class DirectoryClient {
       : info(args), mappings_(mappings) {
     cb = hrd_ctrl_blk_init(info.machine_id,     /* local hid */
                            info.port_index, 0,  /* port index, numa node */
-                           info.num_clients, 0, /* conn qps, UC */
+                           info.num_dirs, 0, /* conn qps, UC */
                            NULL,                /* conn prealloc buf */
                            sizeof(directory_entry_t), /* buf size */
-                           DIR_CLIENT_SHM_KEY,         /* conn buf shm key */
+                           DIR_CLIENT_SHM_KEY,        /* conn buf shm key */
                            NULL, 0, /* dgram prealloc buf, dgram qps */
                            0,       /* buf size */
                            -1);     /* dgram buf shm key */
+
 
     entry_ = reinterpret_cast<volatile directory_entry_t *>(cb->conn_buf);
 
@@ -49,14 +50,20 @@ class DirectoryClient {
       sprintf(name, "for-directory-%d-from-client-%d", i,
               mappings_->machine_id);
       hrd_publish_conn_qp(cb, i, name);
+      hrd_publish_ready(name);
     }
+  }
 
-    qp_attrs = new hrd_qp_attr*[info.num_dirs];
+  void connect() {
+    qp_attrs = new hrd_qp_attr *[info.num_dirs];
     for (int i = 0; i < info.num_dirs; ++i) {
       char name[HRD_QP_NAME_SIZE];
-      sprintf(name, "for-cleint-%d-from-directory-%d", mappings_->machine_id,
+      sprintf(name, "for-client-%d-from-directory-%d", mappings_->machine_id,
               i);
+      hrd_wait_till_ready(name);
       qp_attrs[i] = hrd_get_published_qp(name);
+      assert(qp_attrs[i] != nullptr);
+      hrd_connect_qp(cb, i, qp_attrs[i]);
     }
   }
 

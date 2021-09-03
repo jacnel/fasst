@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
     dir_args.machine_id = machine_id;
     dir_args.num_clients = num_machines;
     dir_args.num_dirs = num_machines;
-    dir_args.port_index = 1;          //+ Make runtime argument.
+    dir_args.port_index = 0;       //+ Make runtime argument.
     dir_args.num_entries = 30000;  //+ Make config.
     directory = new Directory(dir_args);
 
@@ -129,6 +129,9 @@ int main(int argc, char *argv[]) {
       std::cerr << "Error calling pthread_setaffinity_np: " << rc << "\n";
     }
   }
+
+  // Connect the directory.
+  directory->connect();
 
   for (int i = 0; i < workers_per_machine; i++) {
     printf("main: waiting for thread %d\n", i);
