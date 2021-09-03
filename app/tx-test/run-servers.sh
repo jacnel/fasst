@@ -1,7 +1,7 @@
 #!/bin/bash
 source $(dirname $0)/../../util/helpers.sh
 
-export HRD_REGISTRY_IP="128.110.96.189"
+export HRD_REGISTRY_IP="10.10.1.1"
 export MLX5_SHUT_UP_BF=0
 export MLX5_SINGLE_THREADED=1
 export MLX4_SINGLE_THREADED=1
@@ -22,7 +22,7 @@ drop_shm
 if [ "$1" -eq 0 ]; then
 	echo "Resetting QP registry"
 	sudo killall memcached
-	memcached -l 0.0.0.0 1>/dev/null 2>/dev/null &
+	memcached -l ${HRD_REGISTRY_IP} 1>/dev/null 2>/dev/null &
 	sleep 1
 fi
 
