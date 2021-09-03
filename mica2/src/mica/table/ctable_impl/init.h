@@ -64,9 +64,6 @@ CTable<StaticConfig>::CTable(const ::mica::util::Config& config, Alloc* alloc,
   // entries in the buckets. Then reset the locker_id to invalid.
   ::mica::util::memset(buckets_, 0,
                        sizeof(Bucket) * (num_buckets_ + num_extra_buckets_));
-  for (size_t i = 0 ; i < num_buckets_ + num_extra_buckets_; ++i) {
-    buckets_[i].locker_id = Bucket::kInvalidLockerID;
-  }
 
   //+ Cleanup concurrent mode code.
   if (!concurrent_read)
@@ -139,6 +136,9 @@ void CTable<StaticConfig>::reset() {
 
   ::mica::util::memset(buckets_, 0,
                        sizeof(Bucket) * (num_buckets_ + num_extra_buckets_));
+  for (size_t i = 0 ; i < num_buckets_ + num_extra_buckets_; ++i) {
+    buckets_[i].locker_id = Bucket::kInvalidLockerID;
+  }
 
   // initialize a free list of extra buckets
   extra_bucket_free_list_.lock = 0;
