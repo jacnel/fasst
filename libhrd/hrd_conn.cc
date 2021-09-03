@@ -380,10 +380,10 @@ void hrd_create_conn_qps(struct hrd_ctrl_blk *cb) {
     init_attr.qp_state = IBV_QPS_INIT;
     init_attr.pkey_index = 0;
     init_attr.port_num = cb->dev_port_id;
-    init_attr.qp_access_flags = cb->use_uc == 1 ? IBV_ACCESS_REMOTE_WRITE
-                                                : IBV_ACCESS_REMOTE_WRITE |
-                                                      IBV_ACCESS_REMOTE_READ |
-                                                      IBV_ACCESS_REMOTE_ATOMIC;
+    init_attr.qp_access_flags =
+        cb->use_uc == 1 ? IBV_ACCESS_REMOTE_WRITE
+                        : IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ |
+                              IBV_ACCESS_REMOTE_ATOMIC | IBV_ACCESS_LOCAL_WRITE;
 
     if (ibv_modify_qp(cb->conn_qp[i], &init_attr,
                       IBV_QP_STATE | IBV_QP_PKEY_INDEX | IBV_QP_PORT |
@@ -474,7 +474,7 @@ void hrd_connect_qp(struct hrd_ctrl_blk *cb, int n,
                   IBV_QP_RQ_PSN;
 
   if (!cb->use_uc) {
-    conn_attr.max_dest_rd_atomic = 1;
+    conn_attr.max_dest_rd_atomic = 16;
     conn_attr.min_rnr_timer = 12;
     rtr_flags |= IBV_QP_MAX_DEST_RD_ATOMIC | IBV_QP_MIN_RNR_TIMER;
   }
@@ -494,7 +494,7 @@ void hrd_connect_qp(struct hrd_ctrl_blk *cb, int n,
     conn_attr.timeout = 14;
     conn_attr.retry_cnt = 7;
     conn_attr.rnr_retry = 7;
-    conn_attr.max_rd_atomic = 1;
+    conn_attr.max_rd_atomic = 16;
     // conn_attr.max_dest_rd_atomic = 16;
     rts_flags |= IBV_QP_TIMEOUT | IBV_QP_RETRY_CNT | IBV_QP_RNR_RETRY |
                  IBV_QP_MAX_QP_RD_ATOMIC;
