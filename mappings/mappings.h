@@ -74,7 +74,7 @@ class Mappings {
     return ((keyhash >> 32) % tot_directory_machines);
   }
 
-  forceinline int get_directory_offset(uint64_t keyhash) {
+  forceinline uint64_t get_directory_offset(uint64_t keyhash) {
     return (keyhash & ((1UL << 32) - 1));
   }
 

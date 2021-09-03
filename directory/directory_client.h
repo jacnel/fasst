@@ -64,11 +64,22 @@ class DirectoryClient {
       assert(qp_attrs[i] != nullptr);
       hrd_connect_qp(cb, i, qp_attrs[i]);
     }
+
+    char client_name[HRD_QP_NAME_SIZE];
+    sprintf(client_name, "directory-client-%d", info.machine_id);
+    hrd_publish_ready(client_name);
+
+    for (int i = 0; i < info.num_dirs; ++i) {
+      char dir_name[HRD_QP_NAME_SIZE];
+      sprintf(dir_name, "directory-%d", i);
+      hrd_wait_till_ready(dir_name);
+    }
   }
 
   Result lookup(hots_key_t key, directory_entry_t *entry_out) {
     uint64_t keyhash = dir_keyhash(key);
     uint32_t directory_id = mappings_->get_directory_mn(keyhash);
+    uint64_t base_addr = qp_attrs[directory_id]->buf_addr;
 
     struct ibv_sge sge;
     struct ibv_send_wr send_wr, *bad_wr;
@@ -76,6 +87,8 @@ class DirectoryClient {
     uint64_t remote_addr =
         qp_attrs[directory_id]->buf_addr +
         (mappings_->get_directory_offset(keyhash) % info.num_entries);
+    assert(remote_addr >= base_addr &&
+           remote_addr - base_addr < qp_attrs[directory_id]->buf_size);
     uint32_t rkey = qp_attrs[directory_id]->rkey;
     struct ibv_qp *qp = cb->conn_qp[directory_id];
     struct ibv_cq *cq = cb->conn_cq[directory_id];
@@ -106,10 +119,12 @@ class DirectoryClient {
 
     do {
       // Copy current `entry`, which contains the result of remote read or the
-      // previous value when doing a compare-and-swap. Then, add this machine as
-      // an accessor.
+      // previous value when doing a compare-and-swap. Then, add this machine
+      // as an accessor.
       *entry_out = *(const_cast<directory_entry_t *>(entry_));
       add_accessor(entry_out, mappings_->machine_id);
+
+      sge.length = 8;  // Atomic op.
 
       send_wr.opcode = IBV_WR_ATOMIC_CMP_AND_SWP;
       send_wr.wr.atomic.remote_addr = remote_addr;
@@ -132,8 +147,8 @@ class DirectoryClient {
     }
 
     // Current machine must be in accessor set because while loop ended and
-    // entry is not owned by anyone, or is the owner which means another thread
-    // is updating the value.
+    // entry is not owned by anyone, or is the owner which means another
+    // thread is updating the value.
     return Result::kSuccess;
   }
 

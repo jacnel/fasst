@@ -52,6 +52,15 @@ class Directory {
       assert(qp_attrs[i] != nullptr);
       hrd_connect_qp(cb, i, qp_attrs[i]);
     }
+    char dir_name[HRD_QP_NAME_SIZE];
+    sprintf(dir_name, "directory-%d", info.machine_id);
+    hrd_publish_ready(dir_name);
+
+    for (int i = 0; i < info.num_clients; ++i) {
+      char client_name[HRD_QP_NAME_SIZE];
+      sprintf(client_name, "directory-client-%d", i);
+      hrd_wait_till_ready(client_name);
+    }
   }
 };
 
