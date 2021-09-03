@@ -32,16 +32,15 @@ class DirectoryClient {
 
   DirectoryClient(struct dir_args_t args, Mappings *mappings)
       : info(args), mappings_(mappings) {
-    cb = hrd_ctrl_blk_init(info.machine_id,     /* local hid */
-                           info.port_index, 0,  /* port index, numa node */
-                           info.num_dirs, 0, /* conn qps, UC */
-                           NULL,                /* conn prealloc buf */
+    cb = hrd_ctrl_blk_init(info.machine_id,    /* local hid */
+                           info.port_index, 0, /* port index, numa node */
+                           info.num_dirs, 0,   /* conn qps, UC */
+                           NULL,               /* conn prealloc buf */
                            sizeof(directory_entry_t), /* buf size */
                            DIR_CLIENT_SHM_KEY,        /* conn buf shm key */
                            NULL, 0, /* dgram prealloc buf, dgram qps */
                            0,       /* buf size */
                            -1);     /* dgram buf shm key */
-
 
     entry_ = reinterpret_cast<volatile directory_entry_t *>(cb->conn_buf);
 
@@ -74,8 +73,9 @@ class DirectoryClient {
     struct ibv_sge sge;
     struct ibv_send_wr send_wr, *bad_wr;
     struct ibv_wc wc;
-    uint64_t remote_addr = qp_attrs[directory_id]->buf_addr +
-                           mappings_->get_directory_offset(keyhash);
+    uint64_t remote_addr =
+        qp_attrs[directory_id]->buf_addr +
+        (mappings_->get_directory_offset(keyhash) % info.num_entries);
     uint32_t rkey = qp_attrs[directory_id]->rkey;
     struct ibv_qp *qp = cb->conn_qp[directory_id];
     struct ibv_cq *cq = cb->conn_cq[directory_id];
